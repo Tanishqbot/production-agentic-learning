@@ -1,0 +1,70 @@
+[project]
+name = "production-agentic-rag"
+version = "0.1.0"
+description = "Production Agentic RAG — arXiv Paper Curator built from scratch"
+requires-python = ">=3.12,<3.13"
+
+dependencies = [
+    # Web API
+    "fastapi[standard]>=0.115.12",
+    "uvicorn>=0.34.0",
+
+    # Data validation & settings
+    "pydantic>=2.11.3",
+    "pydantic-settings>=2.8.1",
+
+    # PostgreSQL
+    "sqlalchemy>=2.0.0",
+    "psycopg2-binary>=2.9.10",
+    "alembic>=1.13.3",
+
+    # OpenSearch
+    "opensearch-py>=3.0.0",
+
+    # HTTP clients
+    "requests>=2.32.3",
+    "httpx>=0.28.1",
+
+    # Document parsing
+    "docling>=2.43.0",
+    "python-dateutil>=2.9.0.post0",
+
+    # Embeddings
+    "sentence-transformers>=5.1.0",
+
+    # LLM & Agentic
+    "langchain>=0.3.0",
+    "langchain-core>=0.3.0",
+    "langchain-community>=0.3.0",
+    "langchain-ollama>=0.3.0",
+    "langgraph>=0.2.0",
+
+    # Observability
+    "langfuse>=3.0.0",
+
+    # Caching
+    "redis>=6.4.0",
+
+    # Clients
+    "gradio>=4.0.0",
+    "python-telegram-bot>=21.0,<22.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "httpx>=0.28.1",   # for TestClient
+    "ruff>=0.4.0",      # linter + formatter
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
