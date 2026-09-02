@@ -26,8 +26,8 @@
 - [x] `pyproject.toml` — full dependency list using uv
 - [x] `src/__init__.py` and subpackage `__init__.py` files
 - [x] GitHub repo created and pushed: https://github.com/Tanishqbot/production-agentic-learning
-- [x] `src/config.py` — Settings class with pydantic-settings ✅ (first code written!)
-- [ ] `src/database.py` — SQLAlchemy engine
+- [x] `src/config.py` — Settings class with pydantic-settings ✅
+- [x] `src/database.py` — SQLAlchemy engine, SessionLocal, Base ✅
 - [ ] `src/main.py` — FastAPI app + health endpoint
 - [ ] `compose.yml` — Docker Compose
 - [ ] First Alembic migration
@@ -55,17 +55,39 @@
 - `.env.example` has fake placeholder values — safe to commit
 - New developers copy `.env.example` to `.env` and fill in real values
 
-### Mistakes I Made (and corrections)
-1. **Passing strings for int fields** — `Field(default="5432")` should be `Field(default=5432)`. No quotes for integers.
-2. **`model_config` as a nested class** — It's a class-level variable directly inside `Settings`, not a separate class. Pydantic v2 treats `model_config` as a special reserved name.
-3. **Unused import** — Imported `BaseModel` from pydantic but never used it. Removed.
+**5. SQLAlchemy — database.py concepts**
+- `create_engine(DATABASE_URL)` creates the connection pool to PostgreSQL
+- `sessionmaker(autocommit=False, autoflush=False, bind=engine)` creates a session factory
+  - `autocommit=False` → you control when data is committed (essential for rollback)
+  - `autoflush=False` → SQLAlchemy won't secretly write to DB mid-request
+- `declarative_base()` returns a class (`Base`) that all ORM models inherit from
+- f-strings: `f"text {variable}"` — the `{}` is evaluated at runtime and inserted
 
-### Things That Confused Me
-- Why `model_config` is a class variable and not a regular class — will look at Pydantic v2 docs more
+**6. Python naming convention — classes use PascalCase**
+- Classes: `Base`, `Settings`, `Paper`, `SessionLocal` (capital first letter)
+- Variables/functions: `settings`, `engine`, `database_url` (snake_case)
 
-### Questions for Next Session
-- What exactly is `case_sensitive=False` doing in `SettingsConfigDict`?
-- Next task: `src/database.py`
+### Mistakes Made and Corrections
+
+**config.py mistakes:**
+1. `Field(default="5432")` for int field → should be `Field(default=5432)` (no quotes)
+2. `model_config` as a nested class → it's a class-level variable directly inside `Settings`
+3. Unused import: `BaseModel` imported but never used
+
+**database.py mistakes:**
+1. Imported `Settings` (class) AND `settings` (instance) → only need `settings` instance
+2. `f"postgresql://user:password@host:port/dbname"` — literal text, not f-string variables
+   Correct: `f"postgresql://{settings.postgres_user}:{settings.postgres_password}@..."`
+3. Named Base class `base` (lowercase) → should be `Base` (PascalCase — it's a class)
+4. `sessionmaker(bind=engine)` missing `autocommit=False, autoflush=False`
+
+### Questions Answered
+- `case_sensitive=False` → makes `POSTGRES_HOST` and `postgres_host` map to same setting
+- Why import `settings` not `Settings`? → We use the single ready-made instance
+- Why `autocommit=False`? → Need control over transactions to allow rollbacks
+
+### Next Task
+`src/main.py` — FastAPI app entry point + `/health` endpoint
 
 ---
 
