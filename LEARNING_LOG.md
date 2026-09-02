@@ -13,27 +13,59 @@
 ---
 
 ## Day 1 — Infrastructure & Project Setup
-**Date:** _Not started yet_
-**Status:** ⏳ Pending
+**Date:** 2026-09-02
+**Status:** 🔄 In Progress
 
 ### What I Built
-- [ ] Project directory structure
-- [ ] `.gitignore`, `README.md`, `LEARNING_LOG.md`
-- [ ] `pyproject.toml` with uv
-- [ ] `src/config.py` — pydantic-settings
+- [x] Project directory structure (`src/`, `airflow/`, `tests/`, `progress/`, etc.)
+- [x] `.gitignore` — tells Git which files to NEVER commit (secrets, caches, IDE files)
+- [x] `README.md` — project overview, architecture, setup guide
+- [x] `LEARNING_LOG.md` — this file, for session-to-session memory
+- [x] `CONCEPT_NOTES.md` — concepts explained in own words
+- [x] `.env.example` — template of all environment variables (safe to commit)
+- [x] `pyproject.toml` — full dependency list using uv
+- [x] `src/__init__.py` and subpackage `__init__.py` files
+- [x] GitHub repo created and pushed: https://github.com/Tanishqbot/production-agentic-learning
+- [x] `src/config.py` — Settings class with pydantic-settings ✅ (first code written!)
 - [ ] `src/database.py` — SQLAlchemy engine
 - [ ] `src/main.py` — FastAPI app + health endpoint
 - [ ] `compose.yml` — Docker Compose
 - [ ] First Alembic migration
 
 ### Concepts I Understood Today
-_Fill in after session_
+
+**1. pydantic-settings / Settings class**
+- `BaseSettings` reads values from a `.env` file automatically
+- Each field in the class becomes a config variable
+- If the `.env` has `POSTGRES_PORT=5433`, pydantic reads it and validates type
+- If missing from `.env`, the `default` value is used
+- `model_config = SettingsConfigDict(env_file=".env")` is a class-level variable (special Pydantic hook), NOT a nested class
+
+**2. Layered Architecture**
+- Router → Service → Repository → Database
+- Each layer only talks to the one directly below it
+- Makes code testable and swappable independently
+
+**3. Why `__init__.py` files?**
+- Makes Python treat a folder as a "package"
+- Allows `from src.config import settings` style imports
+
+**4. Why `.env.example` and not `.env`?**
+- `.env` has real secrets — never commit it (in `.gitignore`)
+- `.env.example` has fake placeholder values — safe to commit
+- New developers copy `.env.example` to `.env` and fill in real values
+
+### Mistakes I Made (and corrections)
+1. **Passing strings for int fields** — `Field(default="5432")` should be `Field(default=5432)`. No quotes for integers.
+2. **`model_config` as a nested class** — It's a class-level variable directly inside `Settings`, not a separate class. Pydantic v2 treats `model_config` as a special reserved name.
+3. **Unused import** — Imported `BaseModel` from pydantic but never used it. Removed.
 
 ### Things That Confused Me
-_Fill in after session_
+- Why `model_config` is a class variable and not a regular class — will look at Pydantic v2 docs more
 
 ### Questions for Next Session
-_Fill in after session_
+- What exactly is `case_sensitive=False` doing in `SettingsConfigDict`?
+- Next task: `src/database.py`
 
 ---
 
@@ -131,7 +163,8 @@ _Fill in after session_
 ---
 
 ## Overall Progress
-- **Project started:** _TBD_
-- **Last session:** _TBD_
-- **Next session goal:** Day 1 — Set up infrastructure
-- **Blockers:** Need to install Docker Desktop
+- **Project started:** 2026-09-02
+- **Last session:** 2026-09-02 — Day 1 (in progress)
+- **Next task:** `src/database.py` — SQLAlchemy engine setup
+- **Blockers:** Docker Desktop not yet installed (needed for Day 1 compose.yml)
+- **GitHub:** https://github.com/Tanishqbot/production-agentic-learning
