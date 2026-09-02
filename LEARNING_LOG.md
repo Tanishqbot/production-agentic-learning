@@ -187,6 +187,8 @@ _Fill in after session_
 ## Overall Progress
 - **Project started:** 2026-09-02
 - **Last session:** 2026-09-02 — Day 1 (in progress)
-- **Next task:** `src/database.py` — SQLAlchemy engine setup
-- **Blockers:** Docker Desktop not yet installed (needed for Day 1 compose.yml)
+- **Files written:** config.py ✅ | database.py ✅ | main.py ✅ (needs runtime verification)
+- **Next task:** Verify `main.py` runs → then `compose.yml` → then Alembic migration
+- **Blockers:** Docker Desktop not yet installed (needed for compose.yml and Alembic)
 - **GitHub:** https://github.com/Tanishqbot/production-agentic-learning
+- **AI Context file:** `AI_CONTEXT.md` — full project state + teaching instructions for any future AI
