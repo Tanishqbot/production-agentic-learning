@@ -29,8 +29,8 @@
 - [x] `src/config.py` — Settings class with pydantic-settings ✅
 - [x] `src/database.py` — SQLAlchemy engine, SessionLocal, Base ✅
 - [x] `src/main.py` — FastAPI app + /health + / endpoints ✅ (server verified running)
-- [ ] `compose.yml` — Docker Compose (Docker ✅ installed)
-- [ ] First Alembic migration
+- [x] `compose.yml` — Docker Compose ✅ (all 4 services running and healthy)
+- [ ] Alembic init + first migration (create `papers` table)
 
 ### Concepts I Understood Today
 
@@ -104,17 +104,62 @@
 3. `depends_on` uses list format → should use condition format with healthcheck
 4. Missing `healthcheck` on postgres → Airflow connects before DB is ready
 
+**paper.py mistakes:**
+1. `Url` (capital U) → should be `url` (lowercase). Column names are always snake_case.
+   SQLAlchemy creates the column exactly as named — `Url` creates a case-sensitive Postgres column
+2. `autoincrement=True` is redundant → Integer + primary_key=True implies auto-increment
+
+**paper.py — what the student did BETTER than suggested:**
+- Used `default=lambda: datetime.now(timezone.utc)` instead of `datetime.utcnow`
+- `datetime.utcnow()` is deprecated in Python 3.12 — returns naive (timezone-unaware) datetime
+- `datetime.now(timezone.utc)` returns timezone-aware datetime — correct for production
+- Lambda ensures the function is called fresh each insert, not once at import time
+
+### Concepts I Understood Today (continued)
+
+**8. SQLAlchemy ORM Models**
+- A model = a Python class that maps to a DB table
+- Must inherit from `Base` (from `src.database`)
+- `__tablename__` sets the actual table name in PostgreSQL
+- `Column(Type, options)` defines each column
+- Column naming: always snake_case lowercase (matches DB convention)
+- `primary_key=True` on Integer → auto-increment implied, no need for `autoincrement=True`
+- `nullable=False` = required field (DB enforces this, not just Python)
+- `unique=True` = DB enforces no duplicates on this column
+- `default=lambda: datetime.now(timezone.utc)` = timezone-aware timestamp on insert
+
+**9. Alembic — Database migrations**
+- Alembic is version control for your database schema
+- `alembic init src/db` → creates env.py, versions/, alembic.ini
+- `target_metadata = Base.metadata` → tells Alembic which models to watch
+- `config.set_main_option("sqlalchemy.url", DATABASE_URL)` → override URL from code, not .ini
+- `alembic revision --autogenerate -m "message"` → generates migration by comparing models vs DB
+- `alembic upgrade head` → applies all pending migrations to the DB
+- `alembic downgrade -1` → rolls back last migration
+
+**env.py changes made:**
+1. Added `from src.database import Base, DATABASE_URL` at top
+2. Changed `target_metadata = None` → `target_metadata = Base.metadata`
+3. Added `config.set_main_option("sqlalchemy.url", DATABASE_URL)` after `config = context.config`
+
+**alembic.ini change made:**
+- Commented out / blanked `sqlalchemy.url` since it's now set dynamically in env.py
+
 ### Questions Answered
 - `case_sensitive=False` → makes `POSTGRES_HOST` and `postgres_host` map to same setting
 - Why import `settings` not `Settings`? → We use the single ready-made instance
 - Why `autocommit=False`? → Need control over transactions to allow rollbacks
 - Why quote ports in YAML? → YAML parses `5432:5432` ambiguously as a ratio, not a string
 - Why `depends_on` needs healthcheck? → Container starting ≠ service being ready to connect
+- Why is `Url` wrong? → SQLAlchemy uses the name literally; case-sensitive columns are a nightmare to query
+- Why `datetime.now(timezone.utc)` over `datetime.utcnow`? → utcnow deprecated in 3.12, returns naive datetime
+- Why lambda in default? → Without lambda, the expression evaluates ONCE at class definition time, not per-insert
 
 ### Next Task
-Apply 5 improvements to `compose.yml`, then run `docker compose up -d`
+Run `alembic revision --autogenerate -m "create papers table"` then `alembic upgrade head`
 
 ---
+
 
 ## Day 2 — Data Ingestion Pipeline
 **Date:** _Not started yet_

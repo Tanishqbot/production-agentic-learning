@@ -133,6 +133,52 @@ migrations/
 
 Running `alembic upgrade head` applies all migrations in order. This means every developer and every server always has the exact same DB structure. If something goes wrong, you can roll back with `alembic downgrade -1`.
 
+**How autogenerate works:**
+Alembic's `env.py` is the brain of the migration system. It connects Alembic to YOUR models and YOUR database. Two critical things must be configured:
+
+1. **`target_metadata = Base.metadata`** — without this, Alembic has no idea what your models look like. `Base.metadata` is SQLAlchemy's registry of every model that inherits from `Base`. Setting this lets Alembic compare the DB's actual schema against your model definitions and generate the difference as SQL.
+
+2. **`config.set_main_option("sqlalchemy.url", DATABASE_URL)`** — by default Alembic reads the DB URL from `alembic.ini` (a static config file). We override it here so our dynamic `DATABASE_URL` (which reads from `.env` via settings) is used instead. One source of truth for the DB URL.
+
+**The migration workflow:**
+```
+1. Write/change a model in src/models/
+2. alembic revision --autogenerate -m "describe change"
+   → Alembic compares your models to the DB → generates a .py file in versions/
+3. Review the generated file (always check it's doing what you expect)
+4. alembic upgrade head
+   → Runs the SQL against your actual PostgreSQL DB
+```
+
+### What is a SQLAlchemy ORM Model?
+
+A model is a Python class that represents a database table. Every class that inherits from `Base` becomes a table. The class name becomes the Python handle; `__tablename__` becomes the actual SQL table name.
+
+```python
+class Paper(Base):          # Paper = Python class name (PascalCase)
+    __tablename__ = "papers"  # "papers" = actual PostgreSQL table name (snake_case)
+```
+
+**Column rules learned:**
+- Column names: always **lowercase snake_case** — SQLAlchemy creates the column with the exact name you give
+- `Integer + primary_key=True` → auto-increment implied, no need for `autoincrement=True`
+- `nullable=False` → the DB rejects inserts that omit this field (enforced at DB level, not just Python)
+- `unique=True` → DB creates a unique index, rejects duplicate values
+- `index=True` → creates a DB index for faster lookups on that column (use on frequently-queried columns)
+
+**Timezone-aware defaults — important Python 3.12 detail:**
+```python
+# DEPRECATED in Python 3.12 — returns naive datetime (no timezone info)
+created_at = Column(DateTime, default=datetime.utcnow)
+
+# CORRECT — returns timezone-aware datetime
+created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+```
+
+Why lambda? Without it, `datetime.now(timezone.utc)` would be evaluated **once** when Python loads the class definition — every row would get the same timestamp. The `lambda:` makes it a deferred call — evaluated fresh each time a row is inserted.
+
+
+
 ### What is Docker Compose and how does `compose.yml` work?
 
 Docker Compose lets you define and run multiple Docker containers together using one YAML file. Instead of installing PostgreSQL, OpenSearch, Redis directly on your machine, you describe them in `compose.yml` and Docker runs them as isolated containers.

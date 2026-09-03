@@ -190,7 +190,8 @@ D:\AI PLANET\production-agentic-rag\
 ├── LEARNING_LOG.md         ✅ maintained throughout
 ├── CONCEPT_NOTES.md        ✅ maintained throughout
 ├── AI_CONTEXT.md           ✅ THIS FILE
-├── compose.yml             🔄 WRITTEN BY STUDENT — 5 improvements pending (see Section 5)
+├── compose.yml             ✅ DONE (all 4 services running and healthy)
+├── alembic.ini             ✅ DONE (sqlalchemy.url blanked, set dynamically in env.py)
 └── pyproject.toml          ✅ DONE
 ```
 
@@ -284,15 +285,46 @@ async def read_root():
 ```
 **Verified:** `uv run uvicorn src.main:app --reload` → http://localhost:8000/health works ✅
 
-### `compose.yml` — 🔄 STUDENT WROTE, 5 IMPROVEMENTS PENDING
-Student's version is structurally correct. Pending improvements they need to apply:
-1. Quote all ports: `- "5432:5432"` (all 4 services)
-2. Add `restart: unless-stopped` to postgres, opensearch, redis
-3. Add `restart: on-failure` to airflow
-4. Add `healthcheck` block to postgres service
-5. Update airflow `depends_on` to use `condition: service_healthy`
+### `compose.yml` — ✅ DONE
+All 4 services verified running and healthy: postgres, opensearch, redis, airflow.
+Student applied all 5 improvements independently (quoted ports, restart policies, healthcheck, condition depends_on).
 
-**Next step:** Student applies improvements → then run `docker compose up -d`
+### `src/models/paper.py` — 🔄 WRITTEN, ONE FIX PENDING
+Student needs to change `Url` → `url`. Then run alembic.
+
+Current student code (after fix will be):
+```python
+from sqlalchemy import Column, String, Integer, DateTime, Text
+from datetime import datetime, timezone
+from src.database import Base
+
+class Paper(Base):
+    __tablename__ = "papers"
+    id = Column(Integer, primary_key=True, index=True)
+    arxiv_id = Column(String(50), unique=True, nullable=False)
+    title = Column(String(500), nullable=False)
+    authors = Column(Text, nullable=True)
+    abstract = Column(Text, nullable=True)
+    url = Column(String(300), nullable=True)
+    published_date = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+```
+NOTE: Student used `lambda: datetime.now(timezone.utc)` — better than `datetime.utcnow` (deprecated in 3.12). Acknowledge this.
+
+### `src/db/env.py` — ✅ DONE (3 changes applied by student)
+Key changes from default Alembic template:
+1. `from src.database import Base, DATABASE_URL` added at top
+2. `target_metadata = Base.metadata` (was `None`)
+3. `config.set_main_option("sqlalchemy.url", DATABASE_URL)` after `config = context.config`
+
+### `alembic.ini` — ✅ DONE
+`sqlalchemy.url` line blanked — URL now set dynamically in env.py
+
+**CURRENT STATUS:** Student is about to run:
+```bash
+alembic revision --autogenerate -m "create papers table"
+alembic upgrade head
+```
 
 ---
 
@@ -311,6 +343,8 @@ These are recurring patterns this student makes. Watch for them in future code:
 | Missing commas in function calls | `FastAPI(title="x" description="y")` | `FastAPI(title="x", description="y")` |
 | Non-string version | `version=1.0.0` | `version="1.0.0"` |
 | Missing `async` on route handlers | `def read_root():` | `async def read_root():` |
+| Uppercase column name | `Url = Column(...)` | `url = Column(...)` — columns always lowercase snake_case |
+| Redundant autoincrement | `Column(Integer, autoincrement=True, primary_key=True)` | `Column(Integer, primary_key=True)` — implied |
 
 ---
 
