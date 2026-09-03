@@ -133,7 +133,44 @@ migrations/
 
 Running `alembic upgrade head` applies all migrations in order. This means every developer and every server always has the exact same DB structure. If something goes wrong, you can roll back with `alembic downgrade -1`.
 
+### What is Docker Compose and how does `compose.yml` work?
+
+Docker Compose lets you define and run multiple Docker containers together using one YAML file. Instead of installing PostgreSQL, OpenSearch, Redis directly on your machine, you describe them in `compose.yml` and Docker runs them as isolated containers.
+
+**The 6 key concepts:**
+
+**1. Service** — one running container. The name you give it (e.g. `postgres`) becomes its hostname on the internal network. Other containers reach it by that name, not by `localhost`.
+
+**2. `image`** — the pre-built Docker image to use, pulled from Docker Hub. Format: `name:version`. Example: `postgres:15` downloads PostgreSQL version 15.
+
+**3. `ports`** — maps your machine's port to the container's port. Format: `"host:container"`. Always quote them. Example: `"5432:5432"` means traffic hitting your machine on 5432 goes into the container's 5432.
+
+**4. `environment`** — passes config variables into the container. This is how you configure images without editing files inside them. Two valid formats:
+```yaml
+# List format (used here)
+environment:
+  - POSTGRES_USER=rag_user
+
+# Map format (alternative)
+environment:
+  POSTGRES_USER: rag_user
+```
+
+**5. `volumes`** — without this, all data is lost when container stops. A named volume persists data outside the container. Format: `volume_name:/path/inside/container`. You declare named volumes at the bottom of the file.
+
+**6. `networks`** — containers on the same network can reach each other by service name. `driver: bridge` is the default and correct choice for local development.
+
+**Why `depends_on` alone is not enough:**
+`depends_on: postgres` only waits for the postgres **container to start**, not for PostgreSQL to be **ready to accept connections**. PostgreSQL takes a few seconds to initialize. Without a healthcheck, Airflow tries to connect before PostgreSQL is ready and crashes.
+
+Solution: add a `healthcheck` to postgres (uses `pg_isready` — PostgreSQL's own tool), then tell Airflow to wait for `condition: service_healthy` instead of just container started.
+
+**`restart` policies:**
+- `unless-stopped` — restart automatically on crash, but respect manual `docker compose down`
+- `on-failure` — restart only if container exited with an error code (used for Airflow which may fail on first boot)
+
 ---
+
 
 ## Search & Embeddings Concepts
 

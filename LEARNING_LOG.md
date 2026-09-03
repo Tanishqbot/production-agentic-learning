@@ -28,8 +28,8 @@
 - [x] GitHub repo created and pushed: https://github.com/Tanishqbot/production-agentic-learning
 - [x] `src/config.py` — Settings class with pydantic-settings ✅
 - [x] `src/database.py` — SQLAlchemy engine, SessionLocal, Base ✅
-- [ ] `src/main.py` — FastAPI app + health endpoint
-- [ ] `compose.yml` — Docker Compose
+- [x] `src/main.py` — FastAPI app + /health + / endpoints ✅ (server verified running)
+- [ ] `compose.yml` — Docker Compose (Docker ✅ installed)
 - [ ] First Alembic migration
 
 ### Concepts I Understood Today
@@ -67,6 +67,18 @@
 - Classes: `Base`, `Settings`, `Paper`, `SessionLocal` (capital first letter)
 - Variables/functions: `settings`, `engine`, `database_url` (snake_case)
 
+**7. Docker Compose — compose.yml concepts**
+- A `service` = one container. Service name becomes its internal hostname (not `localhost`)
+- `image` = pre-built image from Docker Hub (`name:version`)
+- `ports` = `"host:container"` — always quote! YAML can misparse unquoted ports
+- `environment` = config passed into the container (list format: `- KEY=value`)
+- `volumes` = persist data outside the container — without this all data lost on restart
+- `networks` = shared network so containers talk to each other by service name
+- `depends_on` alone only checks if container STARTED, not if service is READY
+- `healthcheck` = tells Docker how to verify a service is actually ready
+- `restart: unless-stopped` = auto-restart on crash (for stateful services)
+- `restart: on-failure` = restart only on error exit (for Airflow which may fail on first boot)
+
 ### Mistakes Made and Corrections
 
 **config.py mistakes:**
@@ -81,13 +93,26 @@
 3. Named Base class `base` (lowercase) → should be `Base` (PascalCase — it's a class)
 4. `sessionmaker(bind=engine)` missing `autocommit=False, autoflush=False`
 
+**main.py mistakes:**
+1. Missing commas between `FastAPI()` arguments → SyntaxError
+2. `version=1.0.0` not quoted → SyntaxError (not a valid Python literal)
+3. `def read_root()` instead of `async def` → inconsistent, should always be async
+
+**compose.yml — improvements needed (not mistakes, but production gaps):**
+1. Ports unquoted (`- 5432:5432`) → should be quoted (`- "5432:5432"`)
+2. Missing `restart` policy on all services
+3. `depends_on` uses list format → should use condition format with healthcheck
+4. Missing `healthcheck` on postgres → Airflow connects before DB is ready
+
 ### Questions Answered
 - `case_sensitive=False` → makes `POSTGRES_HOST` and `postgres_host` map to same setting
 - Why import `settings` not `Settings`? → We use the single ready-made instance
 - Why `autocommit=False`? → Need control over transactions to allow rollbacks
+- Why quote ports in YAML? → YAML parses `5432:5432` ambiguously as a ratio, not a string
+- Why `depends_on` needs healthcheck? → Container starting ≠ service being ready to connect
 
 ### Next Task
-`src/main.py` — FastAPI app entry point + `/health` endpoint
+Apply 5 improvements to `compose.yml`, then run `docker compose up -d`
 
 ---
 

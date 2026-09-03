@@ -190,6 +190,7 @@ D:\AI PLANET\production-agentic-rag\
 ├── LEARNING_LOG.md         ✅ maintained throughout
 ├── CONCEPT_NOTES.md        ✅ maintained throughout
 ├── AI_CONTEXT.md           ✅ THIS FILE
+├── compose.yml             🔄 WRITTEN BY STUDENT — 5 improvements pending (see Section 5)
 └── pyproject.toml          ✅ DONE
 ```
 
@@ -257,8 +258,7 @@ SessionLocal = sessionmaker(autoflush=False, autocommit=False, bind=engine)
 Base = declarative_base()
 ```
 
-### `src/main.py` — ✅ DONE (student wrote, needs self-verification)
-Student was asked to fix their version. Correct version should be:
+### `src/main.py` — ✅ DONE (student wrote, applied fixes)
 ```python
 from fastapi import FastAPI
 
@@ -282,6 +282,17 @@ async def read_root():
         "docs": "Visit /docs for interactive API documentation",
     }
 ```
+**Verified:** `uv run uvicorn src.main:app --reload` → http://localhost:8000/health works ✅
+
+### `compose.yml` — 🔄 STUDENT WROTE, 5 IMPROVEMENTS PENDING
+Student's version is structurally correct. Pending improvements they need to apply:
+1. Quote all ports: `- "5432:5432"` (all 4 services)
+2. Add `restart: unless-stopped` to postgres, opensearch, redis
+3. Add `restart: on-failure` to airflow
+4. Add `healthcheck` block to postgres service
+5. Update airflow `depends_on` to use `condition: service_healthy`
+
+**Next step:** Student applies improvements → then run `docker compose up -d`
 
 ---
 
