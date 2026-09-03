@@ -30,7 +30,10 @@
 - [x] `src/database.py` — SQLAlchemy engine, SessionLocal, Base ✅
 - [x] `src/main.py` — FastAPI app + /health + / endpoints ✅ (server verified running)
 - [x] `compose.yml` — Docker Compose ✅ (all 4 services running and healthy)
-- [ ] Alembic init + first migration (create `papers` table)
+- [x] `src/models/paper.py` — Paper ORM model ✅
+- [x] Alembic init + first migration ✅ (`papers` table created and verified in PostgreSQL)
+
+**Day 1 Status: ✅ COMPLETE**
 
 ### Concepts I Understood Today
 
@@ -162,14 +165,16 @@ Run `alembic revision --autogenerate -m "create papers table"` then `alembic upg
 
 
 ## Day 2 — Data Ingestion Pipeline
-**Date:** _Not started yet_
-**Status:** ⏳ Pending
+**Date:** 2026-09-04
+**Status:** 🔄 In Progress
 
 ### What I Built
-- [ ] Airflow DAG for daily arXiv sync
-- [ ] arXiv API fetcher (`httpx`)
-- [ ] Docling PDF parser
-- [ ] Text chunker with metadata
+- [ ] `src/models/chunk.py` — Chunk ORM model (with foreign key to papers)
+- [ ] Second Alembic migration — create `chunks` table
+- [ ] `src/repositories/paper_repository.py` — DB queries for papers
+- [ ] `src/repositories/chunk_repository.py` — DB queries for chunks
+- [ ] `src/services/arxiv_fetcher.py` — fetch papers from arXiv API
+- [ ] `airflow/dags/arxiv_sync.py` — daily Airflow DAG
 - [ ] SQLAlchemy models: `Paper`, `Chunk`
 - [ ] Repository layer: save to DB
 
