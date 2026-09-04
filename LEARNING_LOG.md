@@ -169,8 +169,9 @@ Run `alembic revision --autogenerate -m "create papers table"` then `alembic upg
 **Status:** 🔄 In Progress
 
 ### What I Built
-- [ ] `src/models/chunk.py` — Chunk ORM model (with foreign key to papers)
-- [ ] Second Alembic migration — create `chunks` table
+- [x] `src/models/chunk.py` — Chunk ORM model ✅ (fixed all 4 issues, relationship correct)
+- [x] Second Alembic migration — create `chunks` table ✅ (verified in PostgreSQL)
+- [ ] `src/dependencies.py` — FastAPI DB session injector
 - [ ] `src/repositories/paper_repository.py` — DB queries for papers
 - [ ] `src/repositories/chunk_repository.py` — DB queries for chunks
 - [ ] `src/services/arxiv_fetcher.py` — fetch papers from arXiv API
