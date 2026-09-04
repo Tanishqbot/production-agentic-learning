@@ -175,19 +175,73 @@ Run `alembic revision --autogenerate -m "create papers table"` then `alembic upg
 - [ ] `src/repositories/chunk_repository.py` — DB queries for chunks
 - [ ] `src/services/arxiv_fetcher.py` — fetch papers from arXiv API
 - [ ] `airflow/dags/arxiv_sync.py` — daily Airflow DAG
-- [ ] SQLAlchemy models: `Paper`, `Chunk`
-- [ ] Repository layer: save to DB
 
 ### Concepts I Understood Today
-_Fill in after session_
 
-### Things That Confused Me
-_Fill in after session_
+**1. Alembic `include_name` filter — critical for shared databases**
+- Airflow and our app share the same PostgreSQL DB (`rag_db`)
+- Airflow creates its own `ab_*` tables (Flask App Builder tables)
+- Without a filter, Alembic autogenerate sees those tables, thinks they shouldn't exist, and generates DROP TABLE statements — destroying Airflow's data
+- Fix: add `include_name` function to `env.py` that returns `True` only for tables in `Base.metadata`
+- Rule: Alembic should ONLY manage tables it created — ignore everything else
 
-### Questions for Next Session
-_Fill in after session_
+**2. Foreign Keys — linking tables together**
+- A foreign key is a column that points to a primary key in another table
+- `ForeignKey("papers.id")` = "this value must exist as an `id` in the `papers` table"
+- The DB enforces this: you can't create a chunk for a non-existent paper (integrity constraint)
+- SQLAlchemy syntax: `Column(Integer, ForeignKey("table_name.column_name"), nullable=False)`
+
+**3. SQLAlchemy Relationships — Python-level navigation**
+- `relationship()` is a Python-level shortcut — it does NOT create a DB column
+- It lets you navigate between objects: `paper.chunks` → list of chunks, `chunk.paper` → the parent paper
+- The 3 rules of `relationship()`:
+  - **Attribute name** = what you GET (`chunks` → list of chunks, `paper` → one paper)
+  - **String argument** = the OTHER model's class name (exact PascalCase)
+  - **`back_populates`** = attribute name on the OTHER side (must match exactly, bidirectional)
+
+```
+Paper.chunks = relationship("Chunk", back_populates="paper")
+Chunk.paper  = relationship("Paper", back_populates="chunks")
+```
+
+**4. One-to-Many relationship pattern**
+- One Paper has MANY Chunks → Paper side gets a list attribute (plural name: `chunks`)
+- One Chunk belongs to ONE Paper → Chunk side gets a single object attribute (singular: `paper`)
+- The foreign key (`paper_id`) lives on the MANY side (Chunk), not the ONE side (Paper)
+
+### Mistakes Made and Corrections
+
+**Alembic (env.py) — initial setup:**
+- Missing `include_name` filter → autogenerate tried to DROP Airflow tables
+- Fix: add function `include_name(name, type_, parent_names)` that filters by `target_metadata.tables`
+- Add `include_name=include_name` to both `context.configure()` calls in env.py
+
+**chunk.py mistakes:**
+1. `class chunk` (lowercase) → `class Chunk` (PascalCase — it's a class) ← recurring mistake
+2. Column named `context` → should be `content` (context is a framework keyword)
+3. `autoincrement=True` on `chunk_index` → removed (only meaningful for primary keys)
+4. Relationship: `chunk = relationship("Chunk", back_populates="paper")` → 3 sub-errors:
+   - Variable `chunk` → should be `paper` (you get a paper from a chunk)
+   - `"Chunk"` → should be `"Paper"` (point to the OTHER model)
+   - `back_populates="paper"` → should be `"chunks"` (attr name on Paper)
+
+**paper.py mistakes:**
+1. `Url` (capital) → `url` ← SAME mistake as Day 1, not fixed
+2. `paper = relationship("Paper", ...)` → 2 sub-errors:
+   - Variable `paper` → should be `chunks` (you get chunks from a paper)
+   - `"Paper"` → should be `"Chunk"` (self-referential is wrong)
+
+### Questions Answered
+- Why does Alembic try to drop Airflow tables? → It sees DB tables not in metadata → thinks they're orphans to delete
+- What is `back_populates`? → Tells SQLAlchemy the name of the matching attr on the other side (bidirectional)
+- Why is the FK on the Chunk side, not Paper? → FK always goes on the MANY side of a one-to-many
+- Why PascalCase for class name matters in relationships? → SQLAlchemy string lookup `"Chunk"` must match class name exactly
+
+### Next Task
+Apply all 6 fixes to chunk.py and paper.py → run second Alembic migration
 
 ---
+
 
 ## Day 3 — Embeddings + Hybrid Search
 **Date:** _Not started yet_

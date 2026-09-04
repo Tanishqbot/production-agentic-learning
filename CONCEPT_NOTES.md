@@ -178,6 +178,84 @@ created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 Why lambda? Without it, `datetime.now(timezone.utc)` would be evaluated **once** when Python loads the class definition — every row would get the same timestamp. The `lambda:` makes it a deferred call — evaluated fresh each time a row is inserted.
 
 
+### What is a Foreign Key?
+
+A foreign key is a column that enforces a link between two tables. When `chunks.paper_id` has `ForeignKey("papers.id")`, it means:
+- Every value in `paper_id` MUST exist as an `id` in the `papers` table
+- The database itself enforces this — if you try to insert a chunk with `paper_id=999` and paper 999 doesn't exist, the DB raises an error
+- If you delete a paper, you can't leave orphan chunks (referential integrity)
+
+The foreign key always lives on the **MANY** side of a one-to-many relationship:
+```
+papers (ONE)          chunks (MANY)
+id: 1        ←──── paper_id: 1  ← FK lives here
+id: 2        ←──── paper_id: 1
+                   paper_id: 2
+```
+
+### What is a SQLAlchemy Relationship and how does `back_populates` work?
+
+`relationship()` is a **Python-level** feature — it does NOT create a database column. It's a shortcut that lets you navigate between connected objects in Python without writing extra queries.
+
+```python
+# Without relationship — need a separate query
+paper = session.get(Paper, 1)
+chunks = session.query(Chunk).filter(Chunk.paper_id == paper.id).all()
+
+# With relationship — just access the attribute
+paper = session.get(Paper, 1)
+chunks = paper.chunks  # SQLAlchemy fetches automatically
+```
+
+**The 3 rules — memorize these:**
+
+| Rule | Meaning | Example |
+|------|---------|---------|
+| Attribute name | What you GET | `chunks` → you get a list of chunks |
+| String argument | The OTHER model | `"Chunk"` → looks up the Chunk class |
+| `back_populates` | Attr name on OTHER side | `"paper"` → must match `Chunk.paper` |
+
+**The full pattern for one-to-many:**
+```python
+# Paper side — ONE paper has MANY chunks
+class Paper(Base):
+    chunks = relationship("Chunk", back_populates="paper")
+    #           ↑ get chunks    ↑ other model    ↑ attr on Chunk
+
+# Chunk side — MANY chunks, each has ONE paper
+class Chunk(Base):
+    paper_id = Column(Integer, ForeignKey("papers.id"))   # DB column (actual FK)
+    paper = relationship("Paper", back_populates="chunks")
+    #         ↑ get paper   ↑ other model    ↑ attr on Paper
+```
+
+**`back_populates` creates a two-way (bidirectional) link:**
+- If you add a chunk to `paper.chunks`, SQLAlchemy automatically sets `chunk.paper` to that paper
+- Both sides MUST declare `back_populates` pointing to each other — they're a pair
+
+**Common mistakes with relationships:**
+- Pointing to yourself: `relationship("Paper", ...)` inside Paper = self-referential (wrong for one-to-many)
+- Wrong attribute name: name it what you GET, not what you are
+- PascalCase string MUST match class name exactly — `"chunk"` vs `"Chunk"` fails silently
+
+### What is the `include_name` Alembic filter and why is it needed?
+
+When Alembic autogenerates migrations, it compares what's in the DB to what's in `Base.metadata`. If your DB has tables from OTHER apps (like Airflow's `ab_*` tables), Alembic thinks they're orphans and generates `DROP TABLE` statements for them — which would destroy those apps.
+
+The fix is an `include_name` function in `env.py`:
+```python
+def include_name(name, type_, parent_names):
+    if type_ == "table":
+        return name in target_metadata.tables  # only manage OUR tables
+    return True
+
+# Then pass it to context.configure():
+context.configure(..., include_name=include_name)
+```
+
+This tells Alembic: "only compare tables that exist in my metadata — ignore everything else."
+
+---
 
 ### What is Docker Compose and how does `compose.yml` work?
 

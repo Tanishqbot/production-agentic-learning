@@ -345,6 +345,11 @@ These are recurring patterns this student makes. Watch for them in future code:
 | Missing `async` on route handlers | `def read_root():` | `async def read_root():` |
 | Uppercase column name | `Url = Column(...)` | `url = Column(...)` — columns always lowercase snake_case |
 | Redundant autoincrement | `Column(Integer, autoincrement=True, primary_key=True)` | `Column(Integer, primary_key=True)` — implied |
+| Lowercase class name | `class chunk(Base)` | `class Chunk(Base)` — classes always PascalCase |
+| Wrong relationship direction | `relationship("Chunk", ...)` inside Chunk | Must point to OTHER model: `relationship("Paper", ...)` |
+| Wrong attribute name | `chunk = relationship(...)` in Chunk class | Name = what you GET: `paper = relationship(...)` |
+| Wrong back_populates | `back_populates="paper"` on Paper side | Must match attr name on OTHER side: `back_populates="chunks"` |
+| Non-PK autoincrement | `chunk_index = Column(Integer, autoincrement=True)` | Remove — autoincrement only for primary keys |
 
 ---
 
